@@ -1,4 +1,4 @@
-build/
+build*/
 build-wasm/
 .cache/
 compile_commands.json

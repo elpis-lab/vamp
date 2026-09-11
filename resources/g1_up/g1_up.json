@@ -1,0 +1,20 @@
+{
+    "name": "G1_Up",
+    "urdf": "g1/g1_29dof_with_hand_up_spherized.urdf",
+    "srdf": "g1/g1_29dof_with_hand_up_spherized.srdf",
+    "end_effector": "right_palm",
+    "resolution": 80,
+    "bounds": {
+        "lower": [-20.0, -20.0],
+        "upper": [20.0, 20.0]
+    },
+    "default_configuration": [
+        0.0, 0.0, 0.0, 0.74,
+        0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    ],
+    "template": "templates/fk_template.hh",
+    "subtemplates": [{"name": "ccfk", "template": "templates/ccfk_template.hh"}],
+    "output": "g1_up_fk.hh"
+}

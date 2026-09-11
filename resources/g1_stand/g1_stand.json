@@ -1,0 +1,10 @@
+{
+    "name": "G1_Stand",
+    "urdf": "g1/g1_29dof_with_hand_stand_spherized.urdf",
+    "srdf": "g1/g1_29dof_with_hand_stand_spherized.srdf",
+    "end_effector": "right_palm",
+    "resolution": 80,
+    "template": "templates/fk_template.hh",
+    "subtemplates": [{"name": "ccfk", "template": "templates/ccfk_template.hh"}],
+    "output": "g1_stand_fk.hh"
+}
