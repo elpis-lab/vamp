@@ -1,6 +1,7 @@
 #pragma once
 
 #include <limits>
+#include <vamp/planning/configuration.hh>
 #include <vamp/planning/validate.hh>
 #include <vamp/planning/nn.hh>
 #include <vamp/vector.hh>
@@ -17,7 +18,7 @@ namespace vamp::planning
                 float distance = 0;
                 for (auto i = 0U; i < this->size() - 1; ++i)
                 {
-                    distance += this->operator[](i).distance(this->operator[](i + 1));
+                    distance += configuration::distance<Robot>(this->operator[](i), this->operator[](i + 1));
                 }
 
                 return distance;
@@ -25,7 +26,7 @@ namespace vamp::planning
 
             if (this->size() == 2)
             {
-                return this->front().distance(this->back());
+                return configuration::distance<Robot>(this->front(), this->back());
             }
 
             return std::numeric_limits<float>::infinity();
@@ -41,7 +42,7 @@ namespace vamp::planning
                 const auto &current = this->operator[](i);
                 const auto &next = this->operator[](i + 1);
                 new_path.emplace_back(current);
-                new_path.emplace_back(current.interpolate(next, 0.5));
+                new_path.emplace_back(configuration::interpolate<Robot>(current, next, 0.5F));
             }
 
             new_path.emplace_back(this->back());
@@ -65,7 +66,7 @@ namespace vamp::planning
             for (auto i = 0U; i < n_p - 1; ++i)
             {
                 remaining_length += segment_lengths[i] =
-                    this->operator[](i).distance(this->operator[](i + 1));
+                    configuration::distance<Robot>(this->operator[](i), this->operator[](i + 1));
             }
 
             if (remaining_length < std::numeric_limits<float>::epsilon())
@@ -93,10 +94,11 @@ namespace vamp::planning
                     // more than endpoints needed
                     ns = (ns > 2) ? std::min(ns - 2, max_n_states) : 0;
 
-                    const auto &v = b - a;
                     for (auto k = 1U; k <= ns; ++k)
                     {
-                        new_path.emplace_back(a + (static_cast<float>(k) / ns) * v);
+                        new_path.emplace_back(
+                            configuration::interpolate<Robot>(
+                                a, b, static_cast<float>(k) / static_cast<float>(ns + 1)));
                     }
 
                     n -= ns + 1;
@@ -130,7 +132,7 @@ namespace vamp::planning
                 const auto &current = this->operator[](i);
                 const auto &next = this->operator[](i + 1);
 
-                const float segment_cost = current.distance(next);
+                const float segment_cost = configuration::distance<Robot>(current, next);
                 const auto segment_states =
                     static_cast<std::size_t>(segment_cost * static_cast<float>(resolution));
 
@@ -143,8 +145,9 @@ namespace vamp::planning
 
                 for (auto i = 1U; i < segment_states; ++i)
                 {
-                    new_path.emplace_back(current.interpolate(
-                        next, static_cast<float>(i) / static_cast<float>(segment_states)));
+                    new_path.emplace_back(
+                        configuration::interpolate<Robot>(
+                            current, next, static_cast<float>(i) / static_cast<float>(segment_states)));
                 }
             }
 

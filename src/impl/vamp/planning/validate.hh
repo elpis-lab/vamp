@@ -4,6 +4,7 @@
 
 #include <vamp/utils.hh>
 #include <vamp/vector.hh>
+#include <vamp/planning/configuration.hh>
 #include <vamp/collision/environment.hh>
 
 namespace vamp::planning
@@ -72,7 +73,7 @@ namespace vamp::planning
         const typename Robot::Configuration &goal,
         const collision::Environment<FloatVector<rake>> &environment) -> bool
     {
-        auto vector = goal - start;
+        auto vector = configuration::difference<Robot>(start, goal);
         return validate_vector<Robot, rake, resolution>(start, vector, vector.l2_norm(), environment);
     }
 }  // namespace vamp::planning

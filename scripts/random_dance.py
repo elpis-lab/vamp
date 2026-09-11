@@ -18,7 +18,7 @@ def sample_valid(vamp_module, rng):
 def main(
     robot: str = "panda",          # Robot to plan for
     planner: str = "rrtc",         # Planner name to use
-    sampler_name: str = "halton",  # Sampler to use.
+    sampler_name: str = "xorshift",  # Sampler to use.
     skip_rng_iterations: int = 0,  # Skip a number of RNG iterations
     **kwargs,
     ):

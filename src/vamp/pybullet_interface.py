@@ -40,6 +40,15 @@ class PyBulletSimulator:
     client: BulletClient
 
     def __init__(self, urdf: str, joints: List[str], visualize: bool = True):
+        self.has_planar_base = False
+        if urdf:
+            with open(urdf, "r") as f:
+                robot_xml = xmltodict.parse(f.read())["robot"]
+            urdf_joints = robot_xml.get("joint", [])
+            if isinstance(urdf_joints, dict):
+                urdf_joints = [urdf_joints]
+            self.has_planar_base = any(joint.get("@type") == "planar" for joint in urdf_joints)
+
         with RedirectStream(sys.stdout):
             if visualize:
                 self.client = BulletClient(connection_mode = pb.GUI)
@@ -58,7 +67,7 @@ class PyBulletSimulator:
                     urdf,
                     basePosition = (0, 0, 0),
                     baseOrientation = (0, 0, 0, 1),
-                    useFixedBase = True,
+                    useFixedBase = not self.has_planar_base,
                     flags = pb.URDF_MAINTAIN_LINK_ORDER | pb.URDF_USE_SELF_COLLISION
                     )
 
@@ -71,11 +80,27 @@ class PyBulletSimulator:
                     ]
                 for j in range(self.client.getNumJoints(self.skel_id))
                 ]
-            jt = sorted(filter(lambda ji: ji[1] in joints, jtu), key = lambda ji: joints.index(ji[1]))
+            joint_info = {ji[1]: ji for ji in jtu}
+            self.joints = []
+            self.coordinate_commands = []
+            self.lows = []
+            self.highs = []
+            for coordinate_name in joints:
+                joint_name, separator, component = coordinate_name.rpartition("/")
+                if separator and joint_name in joint_info and joint_info[joint_name][2] == pb.JOINT_PLANAR:
+                    self.coordinate_commands.append(("planar", component))
+                    self.lows.append(-np.inf if component != "yaw" else -np.pi)
+                    self.highs.append(np.inf if component != "yaw" else np.pi)
+                    continue
 
-            self.joints = [ji[0] for ji in jt]
-            self.lows = [ji[8] for ji in jt]
-            self.highs = [ji[9] for ji in jt]
+                if coordinate_name not in joint_info:
+                    raise ValueError(f"Configuration coordinate '{coordinate_name}' does not match the URDF.")
+
+                info = joint_info[coordinate_name]
+                self.joints.append(info[0])
+                self.coordinate_commands.append(("joint", info[0]))
+                self.lows.append(info[8])
+                self.highs.append(info[9])
 
             self.link_map = {ji[12]: ji[0] for ji in jtu}
 
@@ -93,8 +118,19 @@ class PyBulletSimulator:
                         self.client.setCollisionFilterPair(0, 0, l1x, l2x, False)
 
     def set_joint_positions(self, positions: List[float]):
-        for joint, value in zip(self.joints, positions):
-            self.client.resetJointState(self.skel_id, joint, value, targetVelocity = 0)
+        planar = {"x": 0.0, "y": 0.0, "yaw": 0.0}
+        for command, value in zip(self.coordinate_commands, positions):
+            kind, target = command
+            if kind == "planar":
+                planar[target] = value
+            else:
+                self.client.resetJointState(self.skel_id, target, value, targetVelocity = 0)
+
+        if self.has_planar_base:
+            orientation = self.client.getQuaternionFromEuler((0.0, 0.0, planar["yaw"]))
+            self.client.resetBasePositionAndOrientation(
+                self.skel_id, (planar["x"], planar["y"], 0.0), orientation
+                )
 
     def in_collision(self) -> bool:
         self.client.performCollisionDetection()

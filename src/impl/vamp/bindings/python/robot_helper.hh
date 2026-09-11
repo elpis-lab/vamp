@@ -52,6 +52,8 @@
 DEFINE_HAS_METHOD(set_lows)
 DEFINE_HAS_METHOD(set_highs)
 DEFINE_HAS_METHOD(set_radius)
+DEFINE_HAS_METHOD(joint_types)
+DEFINE_HAS_METHOD(default_configuration)
 
 namespace vamp::binding
 {
@@ -383,6 +385,38 @@ namespace vamp::binding
             "Minimum and maximum radii sizes of robot spheres.");
         submodule.def(
             "joint_names", []() { return Robot::joint_names; }, "Joint names for the robot in order of DoF");
+        submodule.def(
+            "joint_types",
+            []()
+            {
+                std::vector<std::string> types;
+                types.reserve(Robot::dimension);
+                if constexpr (has_joint_types_v<Robot>)
+                {
+                    for (const auto &type : Robot::joint_types)
+                    {
+                        types.emplace_back(type);
+                    }
+                }
+                else
+                {
+                    types.assign(Robot::dimension, "scalar");
+                }
+                return types;
+            },
+            "Joint coordinate types for the robot in order of DoF");
+        submodule.def(
+            "default_configuration",
+            []() -> NDArray
+            {
+                std::array<float, Robot::dimension> values{};
+                if constexpr (has_default_configuration_v<Robot>)
+                {
+                    values = Robot::default_configuration;
+                }
+                return NA::from(typename Robot::Configuration(values));
+            },
+            "Default physical-space configuration for the robot.");
         submodule.def("end_effector", []() { return Robot::end_effector; }, "End-effector frame name.");
 
         submodule.def(
